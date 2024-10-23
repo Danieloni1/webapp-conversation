@@ -42,23 +42,22 @@ export const sendChatMessage = async (
   }, { onData, onCompleted, onThought, onFile, onError, getAbortController, onMessageEnd, onMessageReplace, onNodeStarted, onWorkflowStarted, onWorkflowFinished, onNodeFinished })
 }
 
-export const fetchConversations = async (appId: string, apiKey: string) => {
-  return get('conversations', { params: { limit: 100, first_id: '', app_id: appId, api_key: apiKey } })
+export const fetchConversations = async (shadow: string) => {
+  return get('conversations', { params: { shadow } })
 }
 
 export const fetchChatList = async (conversationId: string) => {
   return get('messages', { params: { conversation_id: conversationId, limit: 20, last_id: '' } })
 }
 
-// init value. wait for server update
-export const fetchAppParams = async (appId: string, apiKey: string) => {
-  return get('parameters', { params: { app_id: appId, api_key: apiKey } })
+export const fetchAppParams = async (shadow: string) => {
+  return get('parameters', { params: { shadow } })
 }
 
 export const updateFeedback = async ({ url, body }: { url: string; body: Feedbacktype }) => {
   return post(url, { body })
 }
 
-export const generationConversationName = async (id: string, appId: string, apiKey: string) => {
-  return post(`conversations/${id}/name?app_id=${appId}&api_key=${apiKey}`, { body: { auto_generate: true } })
+export const generationConversationName = async (id: string, shadow: string) => {
+  return post(`conversations/${id}/name`, { params: { shadow }, body: { auto_generate: true } })
 }

@@ -71,3 +71,25 @@ class DynamicChatClient {
 }
 
 export const client = new DynamicChatClient()
+
+export function getAppCredentials(shadow: string) {
+  switch (shadow.toLowerCase()) {
+    case 'tom':
+      return {
+        appId: process.env.NEXT_PUBLIC_TOM_APP_ID || '',
+        apiKey: process.env.NEXT_PUBLIC_TOM_APP_KEY || '',
+      };
+    case 'abby':
+      return {
+        appId: process.env.NEXT_PUBLIC_ABBY_APP_ID || '',
+        apiKey: process.env.NEXT_PUBLIC_ABBY_APP_KEY || '',
+      };
+    case 'jim':
+      return {
+        appId: process.env.NEXT_PUBLIC_JIM_APP_ID || '',
+        apiKey: process.env.NEXT_PUBLIC_JIM_APP_KEY || '',
+      };
+    default:
+      return { appId: '', apiKey: '' }
+  }
+}

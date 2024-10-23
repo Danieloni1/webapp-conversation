@@ -19,18 +19,18 @@ import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import Loading from '@/app/components/base/loading'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
 import AppUnavailable from '@/app/components/app-unavailable'
-import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
+import { APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
-import { setAppCredentials } from '@/config/index'
 
 export interface IMainProps {
   params: any
   app_id: string
   api_key: string
+  shadow: string
 }
 
-const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
+const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
   const { t } = useTranslation()
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
@@ -39,9 +39,6 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
   useEffect(() => {
     setHasSetAppConfig(Boolean(app_id && api_key))
   }, [app_id, api_key])
-
-  // Set the app credentials at the beginning of the component
-  setAppCredentials(app_id, api_key)
 
   /*
   * app info
@@ -175,7 +172,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
       setConversationIdChangeBecauseOfNew(false)
     }
     // trigger handleConversationSwitch
-    setCurrConversationId(id, APP_ID)
+    setCurrConversationId(id, app_id)
     hideSidebar()
   }
 
@@ -234,18 +231,18 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
     }
     (async () => {
       try {
-        const [conversationData, appParams] = await Promise.all([
-          fetchConversations(app_id, api_key),
-          fetchAppParams(app_id, api_key)
+        const [conversationsRes, appParamsRes] = await Promise.all([
+          fetchConversations(shadow),
+          fetchAppParams(shadow),
         ])
 
         // handle current conversation id
-        const { data: conversations } = conversationData as { data: ConversationItem[] }
-        const _conversationId = getConversationIdFromStorage(APP_ID)
+        const { data: conversations } = conversationsRes as { data: ConversationItem[] }
+        const _conversationId = getConversationIdFromStorage(app_id)
         const isNotNewConversation = conversations.some(item => item.id === _conversationId)
 
         // fetch new conversation info
-        const { user_input_form, opening_statement: introduction, file_upload, system_parameters }: any = appParams
+        const { user_input_form, opening_statement: introduction, file_upload, system_parameters }: any = appParamsRes
         setLocaleOnClient(APP_INFO.default_language, true)
         setNewConversationInfo({
           name: t('app.chat.newChatDefaultName'),
@@ -263,7 +260,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
         setConversationList(conversations as ConversationItem[])
 
         if (isNotNewConversation)
-          setCurrConversationId(_conversationId, APP_ID, false)
+          setCurrConversationId(_conversationId, app_id, false)
 
         setAppUnavailable(false)
         setInited(true)
@@ -278,7 +275,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
         }
       }
     })()
-  }, [hasSetAppConfig, app_id, api_key])
+  }, [hasSetAppConfig, shadow])
 
   const [isResponding, setIsResponding] = useState(false)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
@@ -437,11 +434,8 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
           }
 
           if (getConversationIdChangeBecauseOfNew()) {
-            const urlParams = new URLSearchParams(window.location.search)
-            const appId = urlParams.get('app_id') || APP_ID
-            const apiKey = urlParams.get('api_key') || API_KEY
-            const { data: allConversations }: any = await fetchConversations(appId, apiKey)
-            const newItem: any = await generationConversationName(allConversations[0].id, appId, apiKey)
+            const { data: allConversations }: any = await fetchConversations(shadow)
+            const newItem: any = await generationConversationName(allConversations[0].id, shadow)
 
             const newAllConversations = produce(allConversations, (draft: any) => {
               draft[0].name = newItem.name
@@ -451,7 +445,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
           setConversationIdChangeBecauseOfNew(false)
           resetNewConversationInputs()
           setChatNotStarted()
-          setCurrConversationId(tempNewConversationId, APP_ID, true)
+          setCurrConversationId(tempNewConversationId, app_id, true)
           setIsResponding(false)
         },
         onFile(file) {
@@ -623,7 +617,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
   }
 
   const renderSidebar = () => {
-    if (!APP_ID || !APP_INFO || !promptConfig)
+    if (!app_id || !APP_INFO || !promptConfig)
       return null
     return (
       <Sidebar
@@ -638,7 +632,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key }) => {
   if (appUnavailable)
     return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} />
 
-  if (!APP_ID || !APP_INFO || !promptConfig)
+  if (!app_id || !APP_INFO || !promptConfig)
     return <Loading type='app' />
 
   return (
