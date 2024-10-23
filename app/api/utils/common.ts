@@ -1,9 +1,9 @@
 import { type NextRequest } from 'next/server'
 import { ChatClient } from 'dify-client'
 import { v4 } from 'uuid'
-import { API_KEY, API_URL, APP_ID } from '@/config'
+import { API_URL } from '@/config'
 
-const userPrefix = `user_${APP_ID}:`
+const userPrefix = 'user_'
 
 export const getInfo = (request: NextRequest) => {
   const sessionId = request.cookies.get('session_id')?.value || v4()
@@ -18,4 +18,56 @@ export const setSession = (sessionId: string) => {
   return { 'Set-Cookie': `session_id=${sessionId}` }
 }
 
-export const client = new ChatClient(API_KEY, API_URL || undefined)
+class DynamicChatClient {
+  private clients: Map<string, InstanceType<typeof ChatClient>> = new Map()
+
+  getClient(appId: string, apiKey: string): InstanceType<typeof ChatClient> {
+    const clientKey = `${appId}:${apiKey}`
+    if (!this.clients.has(clientKey)) {
+      this.clients.set(clientKey, new ChatClient(apiKey, API_URL || undefined))
+    }
+    return this.clients.get(clientKey)!
+  }
+
+  async getConversationMessages(user: string, conversationId: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).getConversationMessages(user, conversationId)
+  }
+
+  async getApplicationParameters(user: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).getApplicationParameters(user)
+  }
+
+  async createChatMessage(inputs: any, query: string, user: string, responseMode: string, conversationId: string, files: any, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).createChatMessage(inputs, query, user, responseMode, conversationId, files)
+  }
+
+  async fileUpload(formData: FormData, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).fileUpload(formData)
+  }
+
+  async getConversations(user: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).getConversations(user)
+  }
+
+  async renameConversation(user: string, conversationId: string, newName: string, appId: string, apiKey: string, autoGenerate: boolean) {
+    return this.getClient(appId, apiKey).renameConversation(conversationId, newName, user, autoGenerate)
+  }
+
+  async deleteConversation(user: string, conversationId: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).deleteConversation(user, conversationId)
+  }
+
+  async getConversation(user: string, conversationId: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).getConversation(user, conversationId)
+  }
+
+  async generateConversationName(user: string, conversationId: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).generateConversationName(user, conversationId)
+  }
+
+  async createCompletionMessage(inputs: any, query: string, user: string, appId: string, apiKey: string) {
+    return this.getClient(appId, apiKey).createCompletionMessage(inputs, query, user)
+  }
+}
+
+export const client = new DynamicChatClient()

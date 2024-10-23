@@ -31,8 +31,10 @@ export const sendChatMessage = async (
     onNodeFinished: IOnNodeFinished
     onWorkflowFinished: IOnWorkflowFinished
   },
+  appId: string,
+  apiKey: string
 ) => {
-  return ssePost('chat-messages', {
+  return ssePost(`/chat-messages?app_id=${appId}&api_key=${apiKey}`, {
     body: {
       ...body,
       response_mode: 'streaming',
@@ -40,8 +42,8 @@ export const sendChatMessage = async (
   }, { onData, onCompleted, onThought, onFile, onError, getAbortController, onMessageEnd, onMessageReplace, onNodeStarted, onWorkflowStarted, onWorkflowFinished, onNodeFinished })
 }
 
-export const fetchConversations = async () => {
-  return get('conversations', { params: { limit: 100, first_id: '' } })
+export const fetchConversations = async (appId: string, apiKey: string) => {
+  return get('conversations', { params: { limit: 100, first_id: '', app_id: appId, api_key: apiKey } })
 }
 
 export const fetchChatList = async (conversationId: string) => {
@@ -49,14 +51,14 @@ export const fetchChatList = async (conversationId: string) => {
 }
 
 // init value. wait for server update
-export const fetchAppParams = async () => {
-  return get('parameters')
+export const fetchAppParams = async (appId: string, apiKey: string) => {
+  return get('parameters', { params: { app_id: appId, api_key: apiKey } })
 }
 
 export const updateFeedback = async ({ url, body }: { url: string; body: Feedbacktype }) => {
   return post(url, { body })
 }
 
-export const generationConversationName = async (id: string) => {
-  return post(`conversations/${id}/name`, { body: { auto_generate: true } })
+export const generationConversationName = async (id: string, appId: string, apiKey: string) => {
+  return post(`conversations/${id}/name?app_id=${appId}&api_key=${apiKey}`, { body: { auto_generate: true } })
 }
