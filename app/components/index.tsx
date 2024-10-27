@@ -7,9 +7,6 @@ import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
-import Sidebar from '@/app/components/sidebar'
-import ConfigSence from '@/app/components/config-scence'
-import Header from '@/app/components/header'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -22,12 +19,15 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { getAppCredentials } from '@/app/api/utils/common'
+import type { AppInfo } from '@/types/app'
 
 export interface IMainProps {
   params: any
   app_id: string
   api_key: string
   shadow: string
+  avatarUrl: string
 }
 
 const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
@@ -35,31 +35,29 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const [hasSetAppConfig, setHasSetAppConfig] = useState(false)
-
-  useEffect(() => {
-    setHasSetAppConfig(Boolean(app_id && api_key))
-  }, [app_id, api_key])
-
-  /*
-  * app info
-  */
-  const [appUnavailable, setAppUnavailable] = useState<boolean>(false)
-  const [isUnknownReason, setIsUnknownReason] = useState<boolean>(false)
-  const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null)
-  const [inited, setInited] = useState<boolean>(false)
-  // in mobile, show sidebar by click button
-  const [isShowSidebar, { setTrue: showSidebar, setFalse: hideSidebar }] = useBoolean(false)
-  const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
-    enabled: false,
-    number_limits: 2,
-    detail: Resolution.low,
-    transfer_methods: [TransferMethod.local_file],
+  const [appInfo, setAppInfo] = useState<AppInfo>({
+    title: '',
+    description: '',
+    copyright: '',
+    privacy_policy: '',
+    default_language: 'en',
+    avatarUrl: '',
   })
 
   useEffect(() => {
-    if (APP_INFO?.title)
-      document.title = `${APP_INFO.title} - Powered by Dify`
-  }, [APP_INFO?.title])
+    const { title, avatarUrl } = getAppCredentials(shadow)
+    setAppInfo(prevInfo => ({
+      ...prevInfo,
+      title,
+      avatarUrl,
+    }))
+    setHasSetAppConfig(Boolean(app_id && api_key))
+  }, [app_id, api_key, shadow])
+
+  useEffect(() => {
+    if (appInfo.title)
+      document.title = `${appInfo.title}`
+  }, [appInfo.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
   useEffect(() => {
@@ -68,6 +66,21 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
       setAutoFreeze(true)
     }
   }, [])
+
+  /*
+  * app info
+  */
+  const [appUnavailable, setAppUnavailable] = useState<boolean | null>(null)
+  const [isUnknownReason, setIsUnknownReason] = useState<boolean>(false)
+  const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null)
+  const [inited, setInited] = useState<boolean>(false)
+  // in mobile, show sidebar by click button
+  const [visionConfig, setVisionConfig] = useState<VisionSettings | undefined>({
+    enabled: false,
+    number_limits: 2,
+    detail: Resolution.low,
+    transfer_methods: [TransferMethod.local_file],
+  })
 
   /*
   * conversation info
@@ -173,7 +186,6 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
     }
     // trigger handleConversationSwitch
     setCurrConversationId(id, app_id)
-    hideSidebar()
   }
 
   /*
@@ -261,6 +273,9 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
 
         if (isNotNewConversation)
           setCurrConversationId(_conversationId, app_id, false)
+
+        // Automatically start a new chat
+        handleStartChat({})
 
         setAppUnavailable(false)
         setInited(true)
@@ -616,75 +631,22 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
     notify({ type: 'success', message: t('common.api.success') })
   }
 
-  const renderSidebar = () => {
-    if (!app_id || !APP_INFO || !promptConfig)
-      return null
-    return (
-      <Sidebar
-        list={conversationList}
-        onCurrentIdChange={handleConversationIdChange}
-        currentId={currConversationId}
-        copyRight={APP_INFO.copyright || APP_INFO.title}
-      />
-    )
-  }
-
-  if (appUnavailable)
-    return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} />
-
-  if (!app_id || !APP_INFO || !promptConfig)
+  if (appUnavailable != false || !app_id || !APP_INFO || !promptConfig)
     return <Loading type='app' />
 
   return (
-    <div className='bg-gray-100'>
-      <Header
-        title={APP_INFO.title}
-        isMobile={isMobile}
-        onShowSideBar={showSidebar}
-        onCreateNewChat={() => handleConversationIdChange('-1')}
-      />
-      <div className="flex rounded-t-2xl bg-white overflow-hidden">
-        {/* sidebar */}
-        {!isMobile && renderSidebar()}
-        {isMobile && isShowSidebar && (
-          <div className='fixed inset-0 z-50'
-            style={{ backgroundColor: 'rgba(35, 56, 118, 0.2)' }}
-            onClick={hideSidebar}
-          >
-            <div className='inline-block' onClick={e => e.stopPropagation()}>
-              {renderSidebar()}
-            </div>
-          </div>
-        )}
-        {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
-          <ConfigSence
-            conversationName={conversationName}
-            hasSetInputs={hasSetInputs}
-            isPublicVersion={isShowPrompt}
-            siteInfo={APP_INFO}
-            promptConfig={promptConfig}
-            onStartChat={handleStartChat}
-            canEditInputs={canEditInputs}
-            savedInputs={currInputs as Record<string, any>}
-            onInputsChange={setCurrInputs}
-          ></ConfigSence>
-
-          {
-            hasSetInputs && (
-              <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
-                <div className='h-full overflow-y-auto' ref={chatListDomRef}>
-                  <Chat
-                    chatList={chatList}
-                    onSend={handleSend}
-                    onFeedback={handleFeedback}
-                    isResponding={isResponding}
-                    checkCanSend={checkCanSend}
-                    visionConfig={visionConfig}
-                  />
-                </div>
-              </div>)
-          }
+    <div className='flex flex-col h-screen bg-gray-100'>
+      <div className="flex-grow overflow-hidden">
+        <div className="h-full bg-white rounded-t-2xl overflow-hidden">
+          <Chat
+            chatList={chatList}
+            onSend={handleSend}
+            onFeedback={handleFeedback}
+            isResponding={isResponding}
+            checkCanSend={checkCanSend}
+            visionConfig={visionConfig}
+            avatarUrl={appInfo.avatarUrl}
+          />
         </div>
       </div>
     </div>

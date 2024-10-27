@@ -103,6 +103,7 @@ export type ConversationItem = {
 }
 
 export type AppInfo = {
+  avatarUrl: string | undefined
   title: string
   description: string
   default_language: Locale

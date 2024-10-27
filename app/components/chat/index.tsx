@@ -1,16 +1,13 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
-import Textarea from 'rc-textarea'
-import s from './style.module.css'
 import Answer from './answer'
 import Question from './question'
 import type { FeedbackFunc } from './type'
 import type { ChatItem, VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
-import Tooltip from '@/app/components/base/tooltip'
 import Toast from '@/app/components/base/toast'
 import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
 import ImageList from '@/app/components/base/image-uploader/image-list'
@@ -33,6 +30,7 @@ export type IChatProps = {
   isResponding?: boolean
   controlClearQuery?: number
   visionConfig?: VisionSettings
+  avatarUrl?: string
 }
 
 const Chat: FC<IChatProps> = ({
@@ -46,16 +44,30 @@ const Chat: FC<IChatProps> = ({
   isResponding,
   controlClearQuery,
   visionConfig,
+  avatarUrl,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
   const isUseInputMethod = useRef(false)
 
   const [query, setQuery] = React.useState('')
-  const handleContentChange = (e: any) => {
-    const value = e.target.value
-    setQuery(value)
-  }
+  const [showHints, setShowHints] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  const hints = [
+    "How do you work?",
+    "What's your expertise and use cases?",
+    "What if I want to pause you?",
+    "Show me an example use case you can do."
+  ];
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    if (showHints && value.trim() !== '') {
+      setShowHints(false);
+    }
+  };
 
   const logError = (message: string) => {
     notify({ type: 'error', message, duration: 3000 })
@@ -117,88 +129,107 @@ const Chat: FC<IChatProps> = ({
     }
   }
 
+  const handleHintClick = (hint: string) => {
+    setShowHints(false);
+    onSend(hint, []);
+  };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [chatList, showHints]);
+
   return (
-    <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
-      {/* Chat List */}
-      <div className="h-full space-y-[30px]">
-        {chatList.map((item) => {
-          if (item.isAnswer) {
-            const isLast = item.id === chatList[chatList.length - 1].id
-            return <Answer
-              key={item.id}
-              item={item}
-              feedbackDisabled={feedbackDisabled}
-              onFeedback={onFeedback}
-              isResponding={isResponding && isLast}
-            />
-          }
-          return (
-            <Question
-              key={item.id}
-              id={item.id}
-              content={item.content}
-              useCurrentUserAvatar={useCurrentUserAvatar}
-              imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
-            />
-          )
-        })}
+    <div className="flex flex-col h-full">
+      {/* Scrollable Chat List */}
+      <div className="flex-grow overflow-y-auto py-6 space-y-6" ref={chatContainerRef}>
+        {chatList.map((item) => (
+          <div key={item.id} className="mb-6">
+            {item.isAnswer ? (
+              <Answer
+                item={item}
+                feedbackDisabled={feedbackDisabled}
+                onFeedback={onFeedback}
+                isResponding={isResponding && item.id === chatList[chatList.length - 1].id}
+                avatarUrl={avatarUrl}
+              />
+            ) : (
+              <Question
+                id={item.id}
+                content={item.content}
+                useCurrentUserAvatar={useCurrentUserAvatar}
+                imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
+              />
+            )}
+          </div>
+        ))}
+
+        {/* Hints */}
+        {showHints && (
+          <div className="grid grid-cols-2 gap-4 mt-4 mx-8">
+            {hints.map((hint, index) => (
+              <button
+                key={index}
+                className="p-3 text-sm text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors duration-200"
+                onClick={() => handleHintClick(hint)}
+              >
+                {hint}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {
-        !isHideSendInput && (
-          <div className={cn(!feedbackDisabled && '!left-3.5 !right-3.5', 'absolute z-10 bottom-0 left-0 right-0')}>
-            <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
-              {
-                visionConfig?.enabled && (
-                  <>
-                    <div className='absolute bottom-2 left-2 flex items-center'>
-                      <ChatImageUploader
-                        settings={visionConfig}
-                        onUpload={onUpload}
-                        disabled={files.length >= visionConfig.number_limits}
-                      />
-                      <div className='mx-1 w-[1px] h-4 bg-black/5' />
-                    </div>
-                    <div className='pl-[52px]'>
-                      <ImageList
-                        list={files}
-                        onRemove={onRemove}
-                        onReUpload={onReUpload}
-                        onImageLinkLoadSuccess={onImageLinkLoadSuccess}
-                        onImageLinkLoadError={onImageLinkLoadError}
-                      />
-                    </div>
-                  </>
-                )
-              }
-              <Textarea
-                className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-sm text-gray-700 outline-none appearance-none resize-none
-                  ${visionConfig?.enabled && 'pl-12'}
-                `}
+
+      {/* Fixed Footer (Input Bar) */}
+      {!isHideSendInput && (
+        <div className="flex-shrink-0 bg-white border-t border-gray-200">
+          <div className='p-4'>
+            <div className='flex items-center space-x-2'>
+              {visionConfig?.enabled && (
+                <ChatImageUploader
+                  settings={visionConfig}
+                  onUpload={onUpload}
+                  disabled={files.length >= visionConfig.number_limits}
+                />
+              )}
+              <input
+                type='text'
+                className='flex-grow p-2 pl-4 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500'
+                placeholder='Talk to me...'
                 value={query}
                 onChange={handleContentChange}
                 onKeyUp={handleKeyUp}
                 onKeyDown={handleKeyDown}
-                autoSize
               />
-              <div className="absolute bottom-2 right-2 flex items-center h-8">
-                <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
-                  }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
-              </div>
+              <button
+                className='w-10 h-10 flex items-center justify-center text-white bg-indigo-600 rounded-full hover:bg-indigo-700'
+                onClick={() => setShowHints(!showHints)}
+              >
+                ?
+              </button>
+              <button
+                className='p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-700'
+                onClick={handleSend}
+              >
+                Submit
+              </button>
             </div>
+            {visionConfig?.enabled && (
+              <ImageList
+                list={files}
+                onRemove={onRemove}
+                onReUpload={onReUpload}
+                onImageLinkLoadSuccess={onImageLinkLoadSuccess}
+                onImageLinkLoadError={onImageLinkLoadError}
+              />
+            )}
           </div>
-        )
-      }
+        </div>
+      )}
     </div>
   )
 }

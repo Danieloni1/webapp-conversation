@@ -60,6 +60,7 @@ type IAnswerProps = {
   onFeedback?: FeedbackFunc
   isResponding?: boolean
   allToolIcons?: Record<string, string | Emoji>
+  avatarUrl?: string
 }
 
 // The component needs to maintain its own state to control whether to display input component
@@ -69,6 +70,7 @@ const Answer: FC<IAnswerProps> = ({
   onFeedback,
   isResponding,
   allToolIcons,
+  avatarUrl,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess } = item
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
@@ -168,12 +170,16 @@ const Answer: FC<IAnswerProps> = ({
   return (
     <div key={id}>
       <div className='flex items-start'>
-        <div className={`${s.answerIcon} w-10 h-10 shrink-0`}>
-          {isResponding
-            && <div className={s.typeingIcon}>
-              <LoadingAnim type='avatar' />
-            </div>
-          }
+        <div className={`w-6 h-6 shrink-0`}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full" />
+          ) : (
+            isResponding && (
+              <div className={s.typeingIcon}>
+                <LoadingAnim type='avatar' />
+              </div>
+            )
+          )}
         </div>
         <div className={`${s.answerWrap}`}>
           <div className={`${s.answer} relative text-sm text-gray-900`}>
