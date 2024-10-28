@@ -80,21 +80,21 @@ export function getAppCredentials(shadow: string) {
       return {
         appId: process.env.NEXT_PUBLIC_TOM_APP_ID || '',
         apiKey: process.env.NEXT_PUBLIC_TOM_APP_KEY || '',
-        title: "Talk to Tom About Hiring",
+        title: shadow,
         avatarUrl,
       };
     case 'abby':
       return {
         appId: process.env.NEXT_PUBLIC_ABBY_APP_ID || '',
         apiKey: process.env.NEXT_PUBLIC_ABBY_APP_KEY || '',
-        title: "Talk to Abby About Hiring",
+        title: shadow,
         avatarUrl,
       };
     case 'jim':
       return {
         appId: process.env.NEXT_PUBLIC_JIM_APP_ID || '',
         apiKey: process.env.NEXT_PUBLIC_JIM_APP_KEY || '',
-        title: "Talk to Jim About Hiring",
+        title: shadow,
         avatarUrl,
       };
     default:

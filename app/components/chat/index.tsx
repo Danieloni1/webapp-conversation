@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import Answer from './answer'
 import Question from './question'
 import type { FeedbackFunc } from './type'
-import type { ChatItem, VisionFile, VisionSettings } from '@/types/app'
+import type { AppInfo, ChatItem, VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
 import Toast from '@/app/components/base/toast'
 import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
@@ -30,7 +30,7 @@ export type IChatProps = {
   isResponding?: boolean
   controlClearQuery?: number
   visionConfig?: VisionSettings
-  avatarUrl?: string
+  appInfo: AppInfo
 }
 
 const Chat: FC<IChatProps> = ({
@@ -44,7 +44,7 @@ const Chat: FC<IChatProps> = ({
   isResponding,
   controlClearQuery,
   visionConfig,
-  avatarUrl,
+  appInfo,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
@@ -155,7 +155,7 @@ const Chat: FC<IChatProps> = ({
                 feedbackDisabled={feedbackDisabled}
                 onFeedback={onFeedback}
                 isResponding={isResponding && item.id === chatList[chatList.length - 1].id}
-                avatarUrl={avatarUrl}
+                avatarUrl={appInfo.avatarUrl}
               />
             ) : (
               <Question

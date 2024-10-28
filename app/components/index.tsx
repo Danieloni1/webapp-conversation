@@ -27,7 +27,6 @@ export interface IMainProps {
   app_id: string
   api_key: string
   shadow: string
-  avatarUrl: string
 }
 
 const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
@@ -645,7 +644,7 @@ const Main: FC<IMainProps> = ({ params, app_id, api_key, shadow }) => {
             isResponding={isResponding}
             checkCanSend={checkCanSend}
             visionConfig={visionConfig}
-            avatarUrl={appInfo.avatarUrl}
+            appInfo={appInfo}
           />
         </div>
       </div>
