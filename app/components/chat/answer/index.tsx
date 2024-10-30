@@ -14,6 +14,7 @@ import Tooltip from '@/app/components/base/tooltip'
 import WorkflowProcess from '@/app/components/workflow/workflow-process'
 import { Markdown } from '@/app/components/base/markdown'
 import type { Emoji } from '@/types/tools'
+import ToolsSection from './tools-display'
 
 const OperationBtn = ({ innerContent, onClick, className }: { innerContent: React.ReactNode; onClick?: () => void; className?: string }) => (
   <div
@@ -167,6 +168,10 @@ const Answer: FC<IAnswerProps> = ({
     </div>
   )
 
+  const customComponents = {
+    ToolsSection,
+  }
+
   return (
     <div key={id}>
       <div className='flex items-start'>
@@ -182,8 +187,8 @@ const Answer: FC<IAnswerProps> = ({
           )}
         </div>
         <div className={`${s.answerWrap}`}>
-          <div className={`${s.answer} relative text-sm text-gray-900`}>
-            <div className={`ml-2 py-3 px-4 bg-gray-100 rounded-tr-2xl rounded-b-2xl ${workflowProcess && 'min-w-[480px]'}`}>
+          <div className={`${s.answer} relative text-sm text-gray-900 w-full`}>
+            <div className={`ml-2 py-3 px-4 bg-gray-100 rounded-tr-2xl rounded-b-2xl w-full`}>
               {workflowProcess && (
                 <WorkflowProcess data={workflowProcess} hideInfo />
               )}
@@ -196,7 +201,10 @@ const Answer: FC<IAnswerProps> = ({
                 : (isAgentMode
                   ? agentModeAnswer
                   : (
-                    <Markdown content={content} />
+                    <Markdown
+                      content={content}
+                      components={customComponents}
+                    />
                   ))}
             </div>
             <div className='absolute top-[-14px] right-[-14px] flex flex-row justify-end gap-1'>
